@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block content %}
+    <article class="media content-section">
+        <div class="media-body">
+        <div class="article-metadata">
+            <a class="mr-2" href="#">{{ time_expense.author.username }}</a>
+            <small class="text-muted">ID: {{ time_expense.id }}</small>
+            <small class="text-muted"> - Created: {{ time_expense.creation_time.strftime("%d-%m-%Y %H:%M:%S") }}</small>
+            {% if time_expense.author == current_user %}
+            <div>
+                <a class="btn btn-secondary btn-sm mt-1 mb-1" href="{{ url_for('time_expense_update', time_expense_id=time_expense.id) }}">Edit</a>
+                <button type="button" class="btn btn-danger btn-sm m-1" data-toggle="modal" data-target="#deleteModal">Delete</button>
+            </div>
+            {% endif %}
+        </div>
+        <h2 class="article-title">{{ time_expense.project }}</h2>
+        <small class="text-muted"><strong> Start Date: </strong>{{ time_expense.start_date.strftime("%d-%m-%Y") }}</small><br>
+        <small class="text-muted"><strong>End Date: </strong>{{ time_expense.end_date.strftime("%d-%m-%Y") }}</small><br><br>
+        <p class="article-content"><strong>Hours Worked: </strong>{{ time_expense.hours_worked }}</p>
+        <small class="article-content">{{ time_expense.description }}</small>
+        </div>
+    </article>
+  <!-- Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">Delete Time Expense?</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            Warning: This operation can't be undone!
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <form action="{{ url_for('delete_time_expense', time_expense_id=time_expense.id) }}" method="POST">
+            <input class="btn btn-danger" type="submit" value="Delete">
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

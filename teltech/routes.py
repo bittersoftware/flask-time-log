@@ -1,7 +1,7 @@
 import os
 import secrets
 from PIL import Image
-from flask import flash, redirect, render_template, url_for, request
+from flask import flash, redirect, render_template, url_for, request, abort
 
 from teltech import app, db, bcrypt
 from teltech.forms import LoginForm, RegistrationForm, UpdateAccountForm, TimeExpenseForm
@@ -100,4 +100,51 @@ def new_time_expense():
         db.session.commit()
         flash("Your working time has been logged", "success")
         return redirect(url_for("home"))
-    return render_template("new_time_expense.html", title="New Time Expense", form=form)
+    return render_template("time_expense_form.html", title="New Time Expense", form=form)
+
+@app.route("/time_expense/<int:time_expense_id>")
+@login_required
+def time_expense(time_expense_id):
+    time_expense = TimeExpense.query.get_or_404(time_expense_id)
+    if time_expense.user_id == current_user.id:
+        return render_template("time_expense.html", time_expense=time_expense)
+    else:
+        abort(403)
+
+@app.route("/time_expense/<int:time_expense_id>/update", methods=["GET", "POST"])
+@login_required
+def time_expense_update(time_expense_id):
+    time_expense = TimeExpense.query.get_or_404(time_expense_id)
+    if time_expense.user_id == current_user.id:
+        form = TimeExpenseForm()
+        if form.validate_on_submit():
+            time_expense.project = form.project.data 
+            time_expense.start_date = form.start_date.data 
+            time_expense.end_date = form.end_date.data 
+            time_expense.hours_worked = form.hours_worked.data 
+            time_expense.description = form.description.data 
+            db.session.commit()
+            flash("Your hours has been updated", "success")
+            return redirect(url_for("time_expense", time_expense_id = time_expense.id))
+        elif request.method == "GET":
+            form.project.data = time_expense.project
+            form.start_date.data = time_expense.start_date
+            form.end_date.data = time_expense.end_date
+            form.hours_worked.data = time_expense.hours_worked
+            form.description.data = time_expense.description
+        return render_template("time_expense_form.html", legend="Update Time Expense", form=form)
+    else:
+        abort(403)
+    
+@app.route("/time_expense/<int:time_expense_id>/delete", methods=["POST"])
+@login_required
+def delete_time_expense(time_expense_id):
+    time_expense = TimeExpense.query.get_or_404(time_expense_id)
+    if time_expense.user_id == current_user.id:
+        db.session.delete(time_expense)
+        db.session.commit()
+        flash("Your time expense registration has been removed!", "success")
+        return redirect(url_for("home"))
+    else:
+        abort(403)
+    
