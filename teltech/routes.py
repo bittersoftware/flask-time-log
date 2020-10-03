@@ -1,23 +1,31 @@
 import os
 import secrets
+from datetime import datetime
+
+from flask import abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required, login_user, logout_user
 from PIL import Image
-from flask import flash, redirect, render_template, url_for, request, abort
 
-from teltech import app, db, bcrypt
-from teltech.forms import LoginForm, RegistrationForm, UpdateAccountForm, TimeExpenseForm
-from teltech.models import User, TimeExpense
-from flask_login import login_user, logout_user, current_user, login_required
+from teltech import app, bcrypt, db, mail
+from teltech.forms import (LoginForm, RegistrationForm, RequestResetForm,
+                           ResetPasswordForm, TimeExpenseForm,
+                           UpdateAccountForm)
+from teltech.models import TimeExpense, User
+from flask_mail import Message
 
+MAX_TIME_TO_EDIT_TIME_EXPENSE = 1800    # SECONDS
 
 @app.route("/")
 @app.route("/home")
 @login_required
 def home():
-    posts = TimeExpense.query.filter_by(user_id=current_user.id).all()
+    page = request.args.get("page", 1, type=int)
+    posts = TimeExpense.query.filter_by(user_id=current_user.id).order_by(TimeExpense.creation_time.desc()).paginate(page=page, per_page=5)
     return render_template("home.html", posts=posts)
 
 
 @app.route("/about")
+@login_required
 def about():
     return render_template("about.html", title="About")
 
@@ -102,12 +110,22 @@ def new_time_expense():
         return redirect(url_for("home"))
     return render_template("time_expense_form.html", title="New Time Expense", form=form)
 
+def expired_time_to_edit(creation_time):
+    current_time = datetime.utcnow()
+    creation_time = creation_time
+    diff_secs = (current_time - creation_time).total_seconds()
+    if diff_secs > MAX_TIME_TO_EDIT_TIME_EXPENSE:
+        return True
+    else:
+        return False
+
 @app.route("/time_expense/<int:time_expense_id>")
 @login_required
 def time_expense(time_expense_id):
     time_expense = TimeExpense.query.get_or_404(time_expense_id)
+    edit_expired = expired_time_to_edit(time_expense.creation_time)
     if time_expense.user_id == current_user.id:
-        return render_template("time_expense.html", time_expense=time_expense)
+        return render_template("time_expense.html", time_expense=time_expense, edit_expired=edit_expired)
     else:
         abort(403)
 
@@ -115,6 +133,9 @@ def time_expense(time_expense_id):
 @login_required
 def time_expense_update(time_expense_id):
     time_expense = TimeExpense.query.get_or_404(time_expense_id)
+    if expired_time_to_edit(time_expense.creation_time):
+        flash("The period available to edit this data has expired", "danger")
+        return redirect(url_for("time_expense", time_expense_id = time_expense.id))
     if time_expense.user_id == current_user.id:
         form = TimeExpenseForm()
         if form.validate_on_submit():
@@ -140,6 +161,9 @@ def time_expense_update(time_expense_id):
 @login_required
 def delete_time_expense(time_expense_id):
     time_expense = TimeExpense.query.get_or_404(time_expense_id)
+    if expired_time_to_edit(time_expense.creation_time):
+        flash("The period available to delete this data has expired", "danger")
+        return redirect(url_for("time_expense", time_expense_id = time_expense.id))
     if time_expense.user_id == current_user.id:
         db.session.delete(time_expense)
         db.session.commit()
@@ -147,4 +171,45 @@ def delete_time_expense(time_expense_id):
         return redirect(url_for("home"))
     else:
         abort(403)
-    
+
+def send_reset_email(user):
+    token = user.get_reset_token()
+    msg = Message("Password Reset Request", 
+                    sender="noreply@demo.com", 
+                    recipients=[user.email])
+    msg.body = f"""To reset your password, visit the following link:
+{url_for("reset_token", token=token,  _external=True)}
+
+If you did not make this request then simply ignore this email and no changes will be made.
+"""
+    mail.send(msg)
+
+@app.route("/reset_password", methods=["GET", "POST"])
+def reset_request():
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        send_reset_email(user)
+        flash("An email has been sent with instructions to reset your password!", "info")
+        return redirect(url_for("login"))
+    return render_template("reset_request.html", title="Reset Password", form=form)
+
+
+@app.route("/reset_password/<token>", methods=["GET", "POST"])
+def reset_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+    user = User.verify_reset_token(token)
+    if not user:
+        flash("That is an invalid or expired token", "warning")
+        return redirect(url_for("reset_request"))
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
+        user.password = hashed_password
+        db.session.commit()
+        flash(f"Your password has been updated. You are now able to login", "success")
+        return redirect(url_for("login"))
+    return render_template("reset_token.html", title="Reset Password", form=form)

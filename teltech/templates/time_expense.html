@@ -3,10 +3,10 @@
     <article class="media content-section">
         <div class="media-body">
         <div class="article-metadata">
-            <a class="mr-2" href="#">{{ time_expense.author.username }}</a>
+            <a class="mr-2" href="{{ url_for("account") }}">{{ time_expense.author.username }}</a>
             <small class="text-muted">ID: {{ time_expense.id }}</small>
             <small class="text-muted"> - Created: {{ time_expense.creation_time.strftime("%d-%m-%Y %H:%M:%S") }}</small>
-            {% if time_expense.author == current_user %}
+            {% if time_expense.author == current_user and edit_expired == False %}
             <div>
                 <a class="btn btn-secondary btn-sm mt-1 mb-1" href="{{ url_for('time_expense_update', time_expense_id=time_expense.id) }}">Edit</a>
                 <button type="button" class="btn btn-danger btn-sm m-1" data-toggle="modal" data-target="#deleteModal">Delete</button>
