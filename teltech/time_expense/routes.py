@@ -7,7 +7,7 @@ from teltech import db
 from teltech.models import TimeExpense
 from teltech.time_expense.forms import TimeExpenseForm
 
-time_expenses = Blueprint("time_expense", __name__)
+time_expenses = Blueprint("time_expenses", __name__)
 
 MAX_TIME_TO_EDIT_TIME_EXPENSE = 1800    # SECONDS
 
@@ -52,7 +52,7 @@ def time_expense_update(time_expense_id):
     time_expense = TimeExpense.query.get_or_404(time_expense_id)
     if expired_time_to_edit(time_expense.creation_time):
         flash("The period available to edit this data has expired", "danger")
-        return redirect(url_for("time_expense.time_expense", time_expense_id=time_expense.id))
+        return redirect(url_for("time_expenses.time_expense", time_expense_id=time_expense.id))
     if time_expense.user_id == current_user.id:
         form = TimeExpenseForm()
         if form.validate_on_submit():
@@ -63,7 +63,7 @@ def time_expense_update(time_expense_id):
             time_expense.description = form.description.data
             db.session.commit()
             flash("Your hours has been updated", "success")
-            return redirect(url_for("time_expense.time_expense", time_expense_id=time_expense.id))
+            return redirect(url_for("time_expenses.time_expense", time_expense_id=time_expense.id))
         elif request.method == "GET":
             form.project.data = time_expense.project
             form.start_date.data = time_expense.start_date
@@ -81,7 +81,7 @@ def delete_time_expense(time_expense_id):
     time_expense = TimeExpense.query.get_or_404(time_expense_id)
     if expired_time_to_edit(time_expense.creation_time):
         flash("The period available to delete this data has expired", "danger")
-        return redirect(url_for("time_expense.time_expense", time_expense_id=time_expense.id))
+        return redirect(url_for("time_expenses.time_expense", time_expense_id=time_expense.id))
     if time_expense.user_id == current_user.id:
         db.session.delete(time_expense)
         db.session.commit()

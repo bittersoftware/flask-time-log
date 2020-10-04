@@ -8,7 +8,7 @@
               <small class="text-muted">ID: {{ post.id }}</small>
               <small class="text-muted"> - Created: {{ post.creation_time.strftime("%d-%m-%Y %H:%M:%S") }}</small>
             </div>
-            <h2><a class="article-title" href="{{ url_for("time_expense.time_expense", time_expense_id=post.id) }}">{{ post.project }}</a></h2>
+            <h2><a class="article-title" href="{{ url_for("time_expenses.time_expense", time_expense_id=post.id) }}">{{ post.project }}</a></h2>
             <small class="text-muted"><strong> Start Date: </strong>{{ post.start_date.strftime("%d-%m-%Y") }}</small><br>
             <small class="text-muted"><strong>End Date: </strong>{{ post.end_date.strftime("%d-%m-%Y") }}</small><br><br>
             <p class="article-content"><strong>Hours Worked: </strong>{{ post.hours_worked }}</p>
