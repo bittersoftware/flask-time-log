@@ -1,0 +1,6 @@
+[flake8]
+per-file-ignores =
+    # line too long
+    run.py: E501,
+    teltech/*.py: E501,
+    teltech/*/*.py: E501,
