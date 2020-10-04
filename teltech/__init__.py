@@ -26,9 +26,10 @@ def create_app(config_class=Config):
     from teltech.users.routes import users
     from teltech.time_expense.routes import time_expenses
     from teltech.main.routes import main
-
+    from teltech.errors.handlers import errors
     app.register_blueprint(users)
     app.register_blueprint(time_expenses)
     app.register_blueprint(main)
+    app.register_blueprint(errors)
 
     return app
